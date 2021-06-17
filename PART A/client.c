@@ -1,56 +1,37 @@
-#include <netdb.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/socket.h>
-#define MAX 80
-#define PORT 8080
-#define SA struct sockaddr
-void func(int sockfd)
-{
-	char buff[MAX];
-	int n;
-	while(1) {
-		bzero(buff, sizeof(buff));
-		printf("Enter the string : ");
-		n = 0;
-		while ((buff[n++] = getchar()) != '\n')
-			;
-		write(sockfd, buff, sizeof(buff));
-		bzero(buff, sizeof(buff));
-		read(sockfd, buff, sizeof(buff));
-		printf("From Server : %s", buff);
-		if ((strncmp(buff, "exit", 4)) == 0) {
-			printf("Client Exit...\n");
-			break;
-		}
-	}
+#include <netinet/in.h>
+#include <string.h>
+
+int main(){
+  int clientSocket, portNum, nBytes;
+  char buffer[1024];
+  struct sockaddr_in serverAddr;
+  socklen_t addr_size;
+
+  clientSocket = socket(PF_INET, SOCK_DGRAM, 0);
+
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(8893);
+  serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);  
+
+  addr_size = sizeof serverAddr;
+
+  for(;;){
+    printf("Type a sentence to send to server:\n");
+    fgets(buffer,1024,stdin);
+    printf("You typed: %s",buffer);
+
+    nBytes = strlen(buffer) + 1;
+    
+    sendto(clientSocket,buffer,nBytes,0,(struct sockaddr *)&serverAddr,addr_size);
+
+                nBytes = recvfrom(clientSocket,buffer,1024,0,NULL, NULL);
+
+    printf("Received from server: %s\n",buffer);
+
+  }
+
+  return 0;
 }
-
-int main()
-{
-	int sockfd, connfd;
-	struct sockaddr_in servaddr, cli;
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd == -1) {
-		printf("socket creation failed...\n");
-		exit(0);
-	}
-	else
-		printf("Socket successfully created..\n");
-	bzero(&servaddr, sizeof(servaddr));
-
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	servaddr.sin_port = htons(PORT);
-
-	if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) {
-		printf("connection with the server failed...\n");
-		exit(0);
-	}
-	else
-		printf("Enter data to transfer:\n");
-	func(sockfd);
-	close(sockfd);
-}
-
